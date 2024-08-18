@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=62.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["fluoraled*"]
+
+[project]
+name = "fluoraled"
+version="0.2.0"
+description="Library for controlling Fluora LED plant"
+readme="README.rst"
+requires-python=">=3.10"
+license = {file = "LICENSE.txt"}
+authors = [
+  {name = "drewancil", email = "andrew@crampedcell.com"},
+]
+keywords = ["fluora","fluoraled"]
+classifiers=[
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'License :: Freely Distributable',
+    'Programming Language :: Python :: 3'
+]
+dependencies = ["python-osc"]
+
+[project.urls]
+Repository = "https://github.com/drewancil/fluoraled"
+
