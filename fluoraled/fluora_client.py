@@ -75,6 +75,41 @@ class FluoraClient:
         else:
             raise LookupError(f"Animation {animat_name} is unknown.")
 
+    def animation_control_bloom(self, bloom: float):
+        """Control the bloom level of the animation."""
+        if bloom < 0.00 or bloom > 1.00:
+            raise ValueError("Bloom must be between 0 and 1")
+        logging.info("Plant command: Set Bloom %s", bloom)
+        self.client.send_message("/Ve3ZS5tBUo4T", [bloom, 0])
+
+    def animation_control_speed(self, speed: float):
+        """Control the speed level of the animation."""
+        if speed < 0.00 or speed > 1.00:
+            raise ValueError("Speed must be between 0 and 1")
+        logging.info("Plant command: Set Speed %s", speed)
+        self.client.send_message("/Ve3ZSfv3PK4T", [speed, 0])
+
+    def animation_control_size(self, size: float):
+        """Control the size of the animation."""
+        if size < 0.00 or size > 1.00:
+            raise ValueError("Size must be between 0 and 1")
+        logging.info("Plant command: Set Speed %s", size)
+        self.client.send_message("/Ve3ZSfSgP54T", [size, 0])
+
+    def palette_saturation_set(self, palette_saturation: float):
+        """Set the palette saturation level."""
+        if palette_saturation < 0.00 or palette_saturation > 1.00:
+            raise ValueError("Saturation must be between 0 and 1")
+        logging.info("Plant command: Set Palette Saturation %s", palette_saturation)
+        self.client.send_message("/y687U4Zgymsj", [palette_saturation, 0])
+
+    def palette_hue_set(self, palette_hue: float):
+        """Set the palette hue level."""
+        if palette_hue < 0.00 or palette_hue > 1.00:
+            raise ValueError("Hue must be between 0 and 1")
+        logging.info("Plant command: Set Palette Hue %s", palette_hue)
+        self.client.send_message("/ThWnxs65l0sj", [palette_hue, 0])
+
     def audio_gain_set(self, audio_gain: float):
         """Set the audio gain level."""
         if audio_gain < 0.00 or audio_gain > 1.00:
