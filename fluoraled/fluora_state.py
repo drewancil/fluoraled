@@ -136,7 +136,7 @@ class FluoraServer(socketserver.UDPServer):
         """Update the plant state."""
         self.fluora_state.model = rec_state["model"]
         self.fluora_state.rssi = rec_state["rssi"]
-        self.fluora_state.mac_address = rec_state["network"]["mac_address"]
+        self.fluora_state.mac_address = rec_state["network"]["macAddress"]
         self.fluora_state.audio_filter = rec_state["audio"]["filter"]["value"]
         self.fluora_state.audio_release = rec_state["audio"]["release"]["value"]
         self.fluora_state.audio_gain = rec_state["audio"]["gain"]["value"]
