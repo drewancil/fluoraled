@@ -4,8 +4,7 @@ import json
 import logging
 import socketserver
 import sys
-
-from box import Box
+from dataclasses import dataclass
 
 
 class FluoraUDPHandler(socketserver.BaseRequestHandler):
@@ -29,6 +28,32 @@ class FluoraUDPHandler(socketserver.BaseRequestHandler):
         logging.debug("Handle UDP: %s", data)
 
 
+@dataclass
+class FluoraState:
+    """Represents the state of a Fluora Plant."""
+
+    model: str = ""
+    rssi: int = 0
+    mac_address: str = ""
+
+    audio_filter: float = 0.0
+    audio_release: float = 0.0
+    audio_gain: float = 0.0
+    audio_attack: float = 0.0
+
+    light_sensor_enabled: bool = False
+
+    brightness: float = 0.0
+    main_light: bool = False
+
+    animation_mode: int = 0
+    active_animation: str = ""
+
+    bloom: float = 0.0
+    speed: float = 0.0
+    size: float = 0.0
+
+
 class FluoraServer(socketserver.UDPServer):
     """Starts UDP listener to receive state updates from the Fluora Plant.
     Sends state to MQTT for use in Home Assistant.
@@ -39,19 +64,12 @@ class FluoraServer(socketserver.UDPServer):
         self.json_payload: str = ""
         self.packet_assemble = {}
         self.plant_state: dict = {}
-        self.plant_box: Box = Box()
+        self.fluora_state = FluoraState()
         try:
             socketserver.UDPServer.__init__(self, server_address, FluoraUDPHandler)
         except OSError:
             logging.error("Server could not start as UDP address/port already in use")
             raise
-
-    @property
-    def the_box(self) -> str | None:
-        """Return the display name of this light."""
-        if self.plant_box is None:
-            return None
-        return str(self.plant_box)
 
     def server_activate(self):
         """Complete me."""
@@ -96,12 +114,12 @@ class FluoraServer(socketserver.UDPServer):
             self.json_payload = "".join(msg_vals)
             logging.debug("json_payload: %s", self.json_payload)
             try:
-                self.plant_state = json.loads(self.json_payload)
-                logging.debug("plant_state: %s", self.plant_state)
-                self.plant_box = Box(self.plant_state)
+                rec_state = json.loads(self.json_payload)
+                self.plant_state = rec_state
+                self.update_state(rec_state)
 
-                # plant_payload = json.dumps(self.plant_state)
-                # logging.debug("plant_payload: %s", plant_payload)
+                # logging.debug("plant_state: %s", self.plant_state)
+                # self.plant_box = Box(self.plant_state)
 
             except json.JSONDecodeError as error:
                 logging.error("JSON error: %s", error)
@@ -113,6 +131,34 @@ class FluoraServer(socketserver.UDPServer):
             self.packet_assemble[udp_packet_seq] = udp_payload
 
         return socketserver.UDPServer.process_request(self, request, client_address)
+
+    def update_state(self, rec_state) -> None:
+        """Update the plant state."""
+        self.fluora_state.model = rec_state["model"]
+        self.fluora_state.rssi = rec_state["rssi"]
+        self.fluora_state.mac_address = rec_state["network"]["mac_address"]
+        self.fluora_state.audio_filter = rec_state["audio"]["filter"]["value"]
+        self.fluora_state.audio_release = rec_state["audio"]["release"]["value"]
+        self.fluora_state.audio_gain = rec_state["audio"]["gain"]["value"]
+        self.fluora_state.audio_attack = rec_state["audio"]["attack"]["value"]
+        self.fluora_state.light_sensor_enabled = rec_state["lightSensor"]["enabled"][
+            "value"
+        ]
+        self.fluora_state.brightness = rec_state["engine"]["brightness"]["value"]
+        self.fluora_state.main_light = rec_state["engine"]["isDisplaying"]["value"]
+        self.fluora_state.animation_mode = rec_state["engine"]["manualMode"][
+            "loadedAnimationIndex"
+        ]
+        self.fluora_state.active_animation = rec_state["active_animation"]
+        self.fluora_state.bloom = rec_state["engine"]["manualMode"]["dashboard"][
+            "Ve3ZS5tBUo4T"
+        ]["value"]
+        self.fluora_state.speed = rec_state["engine"]["manualMode"]["dashboard"][
+            "Ve3ZSfv3PK4T"
+        ]["value"]
+        self.fluora_state.size = rec_state["engine"]["manualMode"]["dashboard"][
+            "Ve3ZSfSgP54T"
+        ]["value"]
 
     def server_close(self):
         """Complete me."""
