@@ -152,15 +152,14 @@ class FluoraServer(socketserver.UDPServer):
         self.fluora_state.active_animation = rec_state["engine"]["manualMode"][
             "activeAnimationIndex"
         ]["value"]
-        self.fluora_state.bloom = rec_state["engine"]["manualMode"]["dashboard"][
-            "Ve3ZS5tBUo4T"
-        ]["value"]
-        self.fluora_state.speed = rec_state["engine"]["manualMode"]["dashboard"][
-            "Ve3ZSfv3PK4T"
-        ]["value"]
-        self.fluora_state.size = rec_state["engine"]["manualMode"]["dashboard"][
-            "Ve3ZSfSgP54T"
-        ]["value"]
+
+        dashboard: dict = rec_state["engine"]["manualMode"]["dashboard"]
+        if "Ve3ZS5tBUo4T" in dashboard:
+            self.fluora_state.bloom = dashboard["Ve3ZS5tBUo4T"]["value"]
+        if "Ve3ZSfv3PK4T" in dashboard:
+            self.fluora_state.speed = dashboard["Ve3ZSfv3PK4T"]["value"]
+        if "Ve3ZSfSgP54T" in dashboard:
+            self.fluora_state.size = dashboard["Ve3ZSfSgP54T"]["value"]
 
     def server_close(self):
         """Complete me."""
