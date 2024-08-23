@@ -149,7 +149,9 @@ class FluoraServer(socketserver.UDPServer):
         self.fluora_state.animation_mode = rec_state["engine"]["manualMode"][
             "loadedAnimationIndex"
         ]
-        self.fluora_state.active_animation = rec_state["active_animation"]
+        self.fluora_state.active_animation = rec_state["engine"]["manualMode"][
+            "activeAnimationIndex"
+        ]["value"]
         self.fluora_state.bloom = rec_state["engine"]["manualMode"]["dashboard"][
             "Ve3ZS5tBUo4T"
         ]["value"]

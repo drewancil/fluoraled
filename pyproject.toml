@@ -7,7 +7,7 @@ include = ["fluoraled*"]
 
 [project]
 name = "fluoraled"
-version="0.2.6"
+version="0.2.7"
 description="Library for controlling Fluora LED plant"
 readme="README.rst"
 requires-python=">=3.10"
