@@ -7,7 +7,7 @@ include = ["fluoraled*"]
 
 [project]
 name = "fluoraled"
-version="0.2.3"
+version="0.2.4"
 description="Library for controlling Fluora LED plant"
 readme="README.rst"
 requires-python=">=3.10"
@@ -22,7 +22,7 @@ classifiers=[
     'License :: Freely Distributable',
     'Programming Language :: Python :: 3'
 ]
-dependencies = ["python-osc"]
+dependencies = ["python-osc", "python-box"]
 
 [project.urls]
 Repository = "https://github.com/drewancil/fluoraled"
