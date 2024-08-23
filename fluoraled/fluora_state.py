@@ -5,6 +5,8 @@ import logging
 import socketserver
 import sys
 
+from box import Box
+
 
 class FluoraUDPHandler(socketserver.BaseRequestHandler):
     """
@@ -37,11 +39,19 @@ class FluoraServer(socketserver.UDPServer):
         self.json_payload: str = ""
         self.packet_assemble = {}
         self.plant_state: dict = {}
+        self.plant_box: Box = Box()
         try:
             socketserver.UDPServer.__init__(self, server_address, FluoraUDPHandler)
         except OSError:
             logging.error("Server could not start as UDP address/port already in use")
             raise
+
+    @property
+    def the_box(self) -> str | None:
+        """Return the display name of this light."""
+        if self.plant_box is None:
+            return None
+        return str(self.plant_box)
 
     def server_activate(self):
         """Complete me."""
@@ -63,7 +73,7 @@ class FluoraServer(socketserver.UDPServer):
     def process_request(self, request, client_address):
         """Process incoming UDP datagrams from the plant.  A single state
         update is 12 datagrams, so they will be stored in memory and posted
-        to MQTT after the final datagram in the series is received.
+        to plant_state after the final datagram in the series is received.
         """
         data = request[0]  # type: ignore
         # this bytes appears to be the UDP partial message number
@@ -88,9 +98,10 @@ class FluoraServer(socketserver.UDPServer):
             try:
                 self.plant_state = json.loads(self.json_payload)
                 logging.debug("plant_state: %s", self.plant_state)
+                self.plant_box = Box(self.plant_state)
 
-                plant_payload = json.dumps(self.plant_state)
-                logging.debug("plant_payload: %s", plant_payload)
+                # plant_payload = json.dumps(self.plant_state)
+                # logging.debug("plant_payload: %s", plant_payload)
 
             except json.JSONDecodeError as error:
                 logging.error("JSON error: %s", error)
