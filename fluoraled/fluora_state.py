@@ -47,15 +47,15 @@ class FluoraState:  # pylint: disable=R0902
 
     main_light: bool = False
     brightness: float = 0.0
+
     animation_mode: int = 0
     active_animation: str = ""
+    animation_bloom: float = 0.0
+    animation_speed: float = 0.0
+    animation_size: float = 0.0
 
     palette_saturation: float = 0.0
     palette_hue: float = 0.0
-
-    bloom: float = 0.0
-    speed: float = 0.0
-    size: float = 0.0
 
 
 class FluoraServer(socketserver.UDPServer):
@@ -161,11 +161,11 @@ class FluoraServer(socketserver.UDPServer):
 
         dashboard: dict = state_update["engine"]["manualMode"]["dashboard"]
         if "Ve3ZS5tBUo4T" in dashboard:
-            self.fluora_state.bloom = dashboard["Ve3ZS5tBUo4T"]["value"]
+            self.fluora_state.animation_bloom = dashboard["Ve3ZS5tBUo4T"]["value"]
         if "Ve3ZSfv3PK4T" in dashboard:
-            self.fluora_state.speed = dashboard["Ve3ZSfv3PK4T"]["value"]
+            self.fluora_state.animation_speed = dashboard["Ve3ZSfv3PK4T"]["value"]
         if "Ve3ZSfSgP54T" in dashboard:
-            self.fluora_state.size = dashboard["Ve3ZSfSgP54T"]["value"]
+            self.fluora_state.animation_size = dashboard["Ve3ZSfSgP54T"]["value"]
 
         palette: dict = state_update["engine"]["manualMode"]["palette"]
         if "saturation" in palette:
