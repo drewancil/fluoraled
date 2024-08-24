@@ -8,6 +8,8 @@ from dataclasses import dataclass
 
 from box import Box
 
+from fluoraled.enums import FluoraAnimations
+
 
 class FluoraUDPHandler(socketserver.BaseRequestHandler):
     """UDP server handler."""
@@ -79,22 +81,26 @@ class FluoraServer(socketserver.UDPServer):
             logging.error("Server could not start as UDP address/port already in use")
             raise
 
-    def server_activate(self):
-        """Complete me."""
-        socketserver.UDPServer.server_activate(self)
+    @property
+    def effect_list(self) -> list[str]:
+        """Return the list of supported effects."""
+        return [effect.name.title() for effect in FluoraAnimations]
 
-    def serve_forever(self, poll_interval=0.5):
-        """Complete me."""
+    @property
+    def state(self) -> FluoraState:
+        """Return the current state of the plant."""
+        return self.fluora_state
+
+    def server_start(self, poll_interval=0.5):
+        """Start listening for UDP packets from the plant."""
         del poll_interval
         while True:
             self.handle_request()
 
-    def _handle_request(self):
-        return socketserver.UDPServer.handle_request(self)
-
-    def _verify_request(self, request, client_address):
-        """Complete me."""
-        return socketserver.UDPServer.verify_request(self, request, client_address)
+    def server_stop(self):
+        """Stop the UDP server from listening for plant updates."""
+        logging.debug("Stopping UDP server")
+        return socketserver.UDPServer.server_close(self)
 
     def _process_request(self, request, client_address):
         """Process incoming UDP datagrams from the plant.  A single state
@@ -177,17 +183,24 @@ class FluoraServer(socketserver.UDPServer):
         if "hue" in palette:
             self.fluora_state.palette_hue = palette["hue"]["value"]
 
-    def server_close(self):
-        """Complete me."""
-        logging.debug("Stopping UDP server")
-        return socketserver.UDPServer.server_close(self)
+    def _server_activate(self):
+        """Activate the server."""
+        socketserver.UDPServer.server_activate(self)
+
+    def _handle_request(self):
+        """Handle request."""
+        return socketserver.UDPServer.handle_request(self)
+
+    def _verify_request(self, request, client_address):
+        """Verify request."""
+        return socketserver.UDPServer.verify_request(self, request, client_address)
 
     def _finish_request(self, request, client_address):
-        """Complete me."""
+        """Finish request."""
         return socketserver.UDPServer.finish_request(self, request, client_address)
 
     def _close_request_address(self, request_address):
-        """Complete."""
+        """Close request address."""
         logging.debug("close_request(%s)", request_address)
         return socketserver.UDPServer.close_request(self, request_address)
 
@@ -202,5 +215,5 @@ class SagebrushControl:  # pylint: disable=too-few-public-methods
         """Handles program exit via SIGINT from systemd or ctrl-c."""
         del sig, frame
         logging.info("Server: Shut down requested")
-        self.fluora_server.server_close()
+        self.fluora_server.server_stop()
         sys.exit(0)

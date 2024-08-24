@@ -30,6 +30,14 @@ class AnimationModeManual(Enum):
     PULSE = 14
 
 
+class AnimationsSoundReactive(Enum):
+    """Sound reactive animations."""
+
+    STEMEQ = 3
+    HUEEQ = 4
+    BOOMCLAP = 5
+
+
 class AnimationModeAuto(Enum):
     """Animation names and number for auto mode."""
 
