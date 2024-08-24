@@ -63,14 +63,18 @@ class FluoraServer(socketserver.UDPServer):
     Sends state to MQTT for use in Home Assistant.
     """
 
-    def __init__(self, server_address) -> None:
+    def __init__(self, server_address: str, port_number: int = 12345) -> None:
+        """Initialize the UDP server to receive state updates from the plant.add()
+        Plant will send updates to UDP:12345 by default.
+        """
         logging.debug("fluora-server initializing")
         self._json_payload: str = ""
         self._packet_assemble = {}
         self.plant_state: dict = {}
         self.fluora_state = FluoraState()
         try:
-            socketserver.UDPServer.__init__(self, server_address, FluoraUDPHandler)
+            server_addr_port = (server_address, port_number)
+            socketserver.UDPServer.__init__(self, server_addr_port, FluoraUDPHandler)
         except OSError:
             logging.error("Server could not start as UDP address/port already in use")
             raise
@@ -192,8 +196,7 @@ class SagebrushControl:  # pylint: disable=too-few-public-methods
     """."""
 
     def __init__(self):
-        address = ("192.168.4.156", 12345)
-        self.fluora_server = FluoraServer(address)
+        self.fluora_server = FluoraServer("192.168.4.156", 12345)
 
     def _exit_handler(self, sig, frame):
         """Handles program exit via SIGINT from systemd or ctrl-c."""
