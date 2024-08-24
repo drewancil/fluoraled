@@ -6,11 +6,11 @@ import socketserver
 import sys
 from dataclasses import dataclass
 
+from box import Box
+
 
 class FluoraUDPHandler(socketserver.BaseRequestHandler):
-    """
-    UDP server handler.
-    """
+    """UDP server handler."""
 
     def __init__(self, request, client_address, fl_server) -> None:
         socketserver.BaseRequestHandler.__init__(
@@ -29,8 +29,10 @@ class FluoraUDPHandler(socketserver.BaseRequestHandler):
 
 
 @dataclass
-class FluoraState:
+class FluoraState:  # pylint: disable=R0902
     """Represents the state of a Fluora Plant."""
+
+    plant_box: Box = Box()
 
     model: str = ""
     rssi: int = 0
@@ -43,11 +45,13 @@ class FluoraState:
 
     light_sensor_enabled: bool = False
 
-    brightness: float = 0.0
     main_light: bool = False
-
+    brightness: float = 0.0
     animation_mode: int = 0
     active_animation: str = ""
+
+    palette_saturation: float = 0.0
+    palette_hue: float = 0.0
 
     bloom: float = 0.0
     speed: float = 0.0
@@ -61,8 +65,8 @@ class FluoraServer(socketserver.UDPServer):
 
     def __init__(self, server_address) -> None:
         logging.debug("fluora-server initializing")
-        self.json_payload: str = ""
-        self.packet_assemble = {}
+        self._json_payload: str = ""
+        self._packet_assemble = {}
         self.plant_state: dict = {}
         self.fluora_state = FluoraState()
         try:
@@ -81,14 +85,14 @@ class FluoraServer(socketserver.UDPServer):
         while True:
             self.handle_request()
 
-    def handle_request(self):
+    def _handle_request(self):
         return socketserver.UDPServer.handle_request(self)
 
-    def verify_request(self, request, client_address):
+    def _verify_request(self, request, client_address):
         """Complete me."""
         return socketserver.UDPServer.verify_request(self, request, client_address)
 
-    def process_request(self, request, client_address):
+    def _process_request(self, request, client_address):
         """Process incoming UDP datagrams from the plant.  A single state
         update is 12 datagrams, so they will be stored in memory and posted
         to plant_state after the final datagram in the series is received.
@@ -102,24 +106,21 @@ class FluoraServer(socketserver.UDPServer):
         udp_payload_raw = data[4:]
         udp_payload = udp_payload_raw.decode("utf-8")
 
-        # 1/12 udp datagrams with full plant light state (json)
-        # clear the slate for a new json update
+        # series of 12 udp datagrams with full plant light state (json)
         if udp_packet_seq == 0:
-            self.packet_assemble.clear()
-            self.packet_assemble[0] = udp_payload
+            # clear the packet_assemble data for a new state update
+            self._packet_assemble.clear()
+            self._packet_assemble[0] = udp_payload
         if udp_packet_seq == 12:
-            # this is the 12/12 (final) message - handle it here
-            self.packet_assemble[12] = udp_payload
-            msg_vals = self.packet_assemble.values()
-            self.json_payload = "".join(msg_vals)
-            logging.debug("json_payload: %s", self.json_payload)
+            # final message in state update (12/12) - process state update
+            self._packet_assemble[12] = udp_payload
+            msg_vals = self._packet_assemble.values()
+            self._json_payload = "".join(msg_vals)
+            logging.debug("json_payload: %s", self._json_payload)
             try:
-                rec_state = json.loads(self.json_payload)
-                self.plant_state = rec_state
-                self.update_state(rec_state)
-
-                # logging.debug("plant_state: %s", self.plant_state)
-                # self.plant_box = Box(self.plant_state)
+                state_update = json.loads(self._json_payload)
+                self.plant_state = state_update
+                self._update_state(state_update)
 
             except json.JSONDecodeError as error:
                 logging.error("JSON error: %s", error)
@@ -128,32 +129,37 @@ class FluoraServer(socketserver.UDPServer):
                 logging.error("JSON error: %s", error)
                 return
         else:
-            self.packet_assemble[udp_packet_seq] = udp_payload
+            # store the partial state update
+            self._packet_assemble[udp_packet_seq] = udp_payload
 
         return socketserver.UDPServer.process_request(self, request, client_address)
 
-    def update_state(self, rec_state) -> None:
-        """Update the plant state."""
-        self.fluora_state.model = rec_state["model"]
-        self.fluora_state.rssi = rec_state["rssi"]
-        self.fluora_state.mac_address = rec_state["network"]["macAddress"]
-        self.fluora_state.audio_filter = rec_state["audio"]["filter"]["value"]
-        self.fluora_state.audio_release = rec_state["audio"]["release"]["value"]
-        self.fluora_state.audio_gain = rec_state["audio"]["gain"]["value"]
-        self.fluora_state.audio_attack = rec_state["audio"]["attack"]["value"]
-        self.fluora_state.light_sensor_enabled = rec_state["lightSensor"]["enabled"][
+    def _update_state(self, state_update) -> None:
+        """Update the plant state dataclass."""
+        # experiment with python-box for nested dict access
+        plant_box = Box(state_update)
+        logging.debug(plant_box)
+
+        self.fluora_state.model = state_update["model"]
+        self.fluora_state.rssi = state_update["rssi"]
+        self.fluora_state.mac_address = state_update["network"]["macAddress"]
+        self.fluora_state.audio_filter = state_update["audio"]["filter"]["value"]
+        self.fluora_state.audio_release = state_update["audio"]["release"]["value"]
+        self.fluora_state.audio_gain = state_update["audio"]["gain"]["value"]
+        self.fluora_state.audio_attack = state_update["audio"]["attack"]["value"]
+        self.fluora_state.light_sensor_enabled = state_update["lightSensor"]["enabled"][
             "value"
         ]
-        self.fluora_state.brightness = rec_state["engine"]["brightness"]["value"]
-        self.fluora_state.main_light = rec_state["engine"]["isDisplaying"]["value"]
-        self.fluora_state.animation_mode = rec_state["engine"]["manualMode"][
+        self.fluora_state.brightness = state_update["engine"]["brightness"]["value"]
+        self.fluora_state.main_light = state_update["engine"]["isDisplaying"]["value"]
+        self.fluora_state.animation_mode = state_update["engine"]["manualMode"][
             "loadedAnimationIndex"
         ]
-        self.fluora_state.active_animation = rec_state["engine"]["manualMode"][
+        self.fluora_state.active_animation = state_update["engine"]["manualMode"][
             "activeAnimationIndex"
         ]["value"]
 
-        dashboard: dict = rec_state["engine"]["manualMode"]["dashboard"]
+        dashboard: dict = state_update["engine"]["manualMode"]["dashboard"]
         if "Ve3ZS5tBUo4T" in dashboard:
             self.fluora_state.bloom = dashboard["Ve3ZS5tBUo4T"]["value"]
         if "Ve3ZSfv3PK4T" in dashboard:
@@ -161,16 +167,22 @@ class FluoraServer(socketserver.UDPServer):
         if "Ve3ZSfSgP54T" in dashboard:
             self.fluora_state.size = dashboard["Ve3ZSfSgP54T"]["value"]
 
+        palette: dict = state_update["engine"]["manualMode"]["palette"]
+        if "saturation" in palette:
+            self.fluora_state.palette_saturation = palette["saturation"]["value"]
+        if "hue" in palette:
+            self.fluora_state.palette_hue = palette["hue"]["value"]
+
     def server_close(self):
         """Complete me."""
         logging.debug("Stopping UDP server")
         return socketserver.UDPServer.server_close(self)
 
-    def finish_request(self, request, client_address):
+    def _finish_request(self, request, client_address):
         """Complete me."""
         return socketserver.UDPServer.finish_request(self, request, client_address)
 
-    def close_request_address(self, request_address):
+    def _close_request_address(self, request_address):
         """Complete."""
         logging.debug("close_request(%s)", request_address)
         return socketserver.UDPServer.close_request(self, request_address)
