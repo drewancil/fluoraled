@@ -72,8 +72,8 @@ class FluoraServer(socketserver.UDPServer):
         logging.debug("fluora-server initializing")
         self._json_payload: str = ""
         self._packet_assemble = {}
-        self.plant_state: dict = {}
-        self.fluora_state = FluoraState()
+        self._plant_state: dict = {}
+        self._fluora_state = FluoraState()
         try:
             server_addr_port = (server_address, port_number)
             socketserver.UDPServer.__init__(self, server_addr_port, FluoraUDPHandler)
@@ -87,9 +87,9 @@ class FluoraServer(socketserver.UDPServer):
         return [effect.name.title() for effect in FluoraAnimations]
 
     @property
-    def state(self) -> FluoraState:
+    def fluora_state(self) -> FluoraState:
         """Return the current state of the plant."""
-        return self.fluora_state
+        return self._fluora_state
 
     def server_start(self, poll_interval=0.5):
         """Start listening for UDP packets from the plant."""
@@ -102,7 +102,7 @@ class FluoraServer(socketserver.UDPServer):
         logging.debug("Stopping UDP server")
         return socketserver.UDPServer.server_close(self)
 
-    def _process_request(self, request, client_address):
+    def _process_request(self, request, client_address):  # pylint: disable=R1710
         """Process incoming UDP datagrams from the plant.  A single state
         update is 12 datagrams, so they will be stored in memory and posted
         to plant_state after the final datagram in the series is received.
@@ -129,7 +129,7 @@ class FluoraServer(socketserver.UDPServer):
             logging.debug("json_payload: %s", self._json_payload)
             try:
                 state_update = json.loads(self._json_payload)
-                self.plant_state = state_update
+                self._plant_state = state_update
                 self._update_state(state_update)
 
             except json.JSONDecodeError as error:
